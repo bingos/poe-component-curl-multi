@@ -288,7 +288,7 @@ sub _perform {
                                ${$state->{header}}))[-1];
          my $response = HTTP::Response->parse($last_header .
                                               "\n\n" .
-                                              ${ $state->{body} }
+                                              ( ${ $state->{body} } || '' )
          );
          $req->uri( $easy->getinfo(CURLINFO_EFFECTIVE_URL) );
          $response->request($req);
