@@ -36,7 +36,7 @@ sub spawn {
   $self->{session_id} = POE::Session->create(
         object_states => [
            $self => { shutdown => '_shutdown', request => '_request', cancel => '_cancel', pending_requests_count => '_req_count' },
-           $self => [qw(_start _stop _dequeue _perform _result)],
+           $self => [qw(_start _stop _dequeue _perform _result _progress)],
         ],
         heap => $self,
         ( ref($options) eq 'HASH' ? ( options => $options ) : () ),
@@ -128,7 +128,7 @@ sub _cancel {
 }
 
 sub _request {
-  my ($kernel,$self,$state,$sender) = @_[KERNEL,OBJECT,STATE,SENDER];
+  my ($kernel,$self,$me,$state,$sender) = @_[KERNEL,OBJECT,SESSION,STATE,SENDER];
   my $sender_id = $sender->ID();
   my $args;
   my $errsp;
@@ -220,9 +220,9 @@ sub _request {
     $easy->setopt(CURLOPT_HTTPHEADER,
         [ split "\n", $req->headers->as_string ]);
 
-    if (length $req->content) {
-        $easy->setopt(CURLOPT_POSTFIELDS, $req->content);
-        $easy->setopt(CURLOPT_POSTFIELDSIZE, length $req->content);
+    if (my $content = $req->content) {
+        $easy->setopt(CURLOPT_POSTFIELDS, $content);
+        $easy->setopt(CURLOPT_POSTFIELDSIZE, length $content);
     }
 
     $easy->setopt(CURLOPT_VERBOSE, 1) if $self->{curl_debug};
@@ -242,6 +242,11 @@ sub _request {
     $args->{header} = \$header;
     push @{ $self->{queue} }, $args;
     $self->{req_to_id}->{$req} = $id;
+    if ( $args->{progress} ) {
+      $easy->setopt(CURLOPT_NOPROGRESS,0);
+      $easy->setopt(CURLOPT_PROGRESSFUNCTION,
+        $me->callback( '_progress', $args->{sender}, $args->{progress}, $req, $args->{tag} ) );
+    }
   }
   $poe_kernel->yield( '_dequeue' );
   return;
@@ -320,6 +325,14 @@ sub _result {
   $kernel->post( $state->{sender}, $state->{response}, $reqpack, $respack );
   $kernel->refcount_decrement( $state->{sender}, __PACKAGE__ );
   return;
+}
+
+sub _progress {
+  my ($kernel,$self,$ours,$theirs) = @_[KERNEL,OBJECT,ARG0,ARG1];
+  my $sender = shift @{ $ours };
+  my $event  = shift @{ $ours };
+  $kernel->post( $sender, $event, $ours, [ @{ $theirs }[2,1] ] );
+  return 0; # important
 }
 
 sub _error {
@@ -495,6 +508,8 @@ an L<HTTP::Request> object which defines the request.  For example:
     'response',                 # my state to receive responses
     GET('http://poe.perl.org'), # a simple HTTP request
     'unique id',                # a tag to identify the request
+    'progress',                 # an event to indicate progress
+    'http://1.2.3.4:80/'        # proxy to use for this request
   );
 
 This invocation is compatible with L<POE::Component::Client::HTTP>.
@@ -516,6 +531,11 @@ alternatively, a L<POE::Session> C<postback> that will be invoked with responses
 =item C<tag>
 
 A tag to identify the request.
+
+=item C<progress>
+
+An optional handler, if specified the component will provide progress metrics
+(see sample handler below).
 
 =item C<proxy>
 
@@ -571,6 +591,29 @@ HTTP::Response object.
 
 Please see the HTTP::Request and HTTP::Response manpages for more
 information.
+
+=head2 progress handler
+
+The example progress handler shows how to calculate a percentage of
+download completion.
+
+  sub progress_handler {
+    my $gen_args  = $_[ARG0];    # args passed to all calls
+    my $call_args = $_[ARG1];    # args specific to the call
+
+    my $req = $gen_args->[0];    # HTTP::Request object being serviced
+    my $tag = $gen_args->[1];    # Request ID tag from.
+    my $got = $call_args->[0];   # Number of bytes retrieved so far.
+    my $tot = $call_args->[1];   # Total bytes to be retrieved.
+
+    my $percent = $got / $tot * 100;
+
+    printf(
+      "-- %.0f%% [%d/%d]: %s\n", $percent, $got, $tot, $req->uri()
+    );
+
+    return;
+  }
 
 =head1 STREAMING
 
