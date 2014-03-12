@@ -214,16 +214,17 @@ sub _request {
       $easy->setopt(CURLOPT_PROXY, $proxy) if $proxy;
     }
 
+    my @extra_headers;
+    if (my $content = $req->content) {
+        $easy->setopt(CURLOPT_POSTFIELDS, $content);
+        push @extra_headers, 'Expect:';
+    }
+
     $easy->setopt(CURLOPT_TIMEOUT, $self->{timeout});
     $easy->setopt( $methods{ $req->method }, 1 );
     $easy->setopt(CURLOPT_CUSTOMREQUEST, $req->method);
     $easy->setopt(CURLOPT_HTTPHEADER,
-        [ split "\n", $req->headers->as_string ]);
-
-    if (my $content = $req->content) {
-        $easy->setopt(CURLOPT_POSTFIELDS, $content);
-        $easy->setopt(CURLOPT_POSTFIELDSIZE, length $content);
-    }
+        [ split( m!\x0D\x0A!, $req->headers_as_string("\x0D\x0A") ), @extra_headers ]);
 
     $easy->setopt(CURLOPT_VERBOSE, 1) if $self->{curl_debug};
 
