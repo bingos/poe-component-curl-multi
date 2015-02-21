@@ -6,9 +6,9 @@ use strict;
 use warnings;
 use HTTP::Response;
 use HTTP::Status;
-use WWW::Curl;
-use WWW::Curl::Easy;
-use WWW::Curl::Multi;
+use Net::Curl qw[:constants];
+use Net::Curl::Easy qw[:constants];
+use Net::Curl::Multi qw[:constants];
 use Scalar::Util qw[refaddr];
 use POE;
 
@@ -32,7 +32,7 @@ sub spawn {
   $self->{timeout} = 180 unless $self->{timeout} && $self->{timeout} =~ m!^\d+$!;
   $self->{agent} = [ $self->{agent} ] unless ref $self->{agent};
   delete $self->{agent} unless ref $self->{agent} eq 'ARRAY';
-  $self->{multi} = WWW::Curl::Multi->new();
+  $self->{multi} = Net::Curl::Multi->new();
   $self->{session_id} = POE::Session->create(
         object_states => [
            $self => { shutdown => '_shutdown', request => '_request', cancel => '_cancel', pending_requests_count => '_req_count' },
@@ -198,7 +198,7 @@ sub _request {
   $kernel->refcount_increment( $sender_id, __PACKAGE__ )
         unless ref $args->{response} eq 'POE::Session::AnonEvent';
   {
-    my $easy = WWW::Curl::Easy->new;
+    my $easy = Net::Curl::Easy->new;
     my $req = $args->{request};
     $easy->setopt(CURLOPT_URL, $req->uri);
     $easy->setopt(CURLOPT_SSL_VERIFYPEER, 0);
@@ -236,7 +236,7 @@ sub _request {
     my ($response, $header);
     $easy->setopt(CURLOPT_WRITEDATA, \$response);
     $easy->setopt(CURLOPT_WRITEHEADER, \$header);
-    $easy->setopt(CURLOPT_PRIVATE, $id);
+    #$easy->setopt(CURLOPT_PRIVATE, $id);
     $args->{id} = $id;
     $args->{easy} = $easy;
     $args->{body} = \$response;
@@ -271,7 +271,8 @@ sub _perform {
 
   $self->{multi}->perform;
 
-  while (my ($id, $rv) = $self->{multi}->info_read) {
+  while (my ($msg, $easy, $rv) = $self->{multi}->info_read) {
+    my $id = refaddr $easy;
     if ($id) {
       my $state = delete $self->{state}->{ $id };
       my $req = $state->{request};
@@ -287,7 +288,7 @@ sub _perform {
          upload_bytes => $easy->getinfo(CURLINFO_SIZE_UPLOAD),
       };
       if ($rv) {
-         $kernel->yield( '_result', $state, [ $rv, $easy->errbuf ], $stats );
+         $kernel->yield( '_result', $state, [ 0+$rv, $easy->error ], $stats );
       }
       else {
          my $last_header = (split(/\r?\n\r?\n/,
@@ -409,7 +410,7 @@ POE::Component::Curl::Multi is an HTTP user-agent for L<POE>.  It lets
 other sessions run while HTTP transactions are being processed, and it
 lets several HTTP transactions be processed in parallel.
 
-It uses L<WWW::Curl> internally to provide access to C<libcurl> for fast
+It uses L<Net::Curl> internally to provide access to C<libcurl> for fast
 performance. It strives to be API compatible(ish) with
 L<POE::Component::Client::HTTP>.
 
@@ -650,7 +651,7 @@ L<AnyEvent::Curl::Multi> by Michael S. Fischer
 
 =head1 SEE ALSO
 
-L<WWW::Curl>
+L<Net::Curl>
 
 L<AnyEvent::Curl::Multi>
 

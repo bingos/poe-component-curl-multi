@@ -16,10 +16,6 @@ sub client_start {
   $heap->{count} = 2;
   DEBUG and warn "client starting...\n";
 
-  my $secure_request = GET(
-    'http://google.com/',
-    Connection => 'close',
-  );
   $kernel->post(
     weeble => request => got_response =>
     $_,
@@ -50,7 +46,7 @@ sub client_got_response {
     warn "`", '-' x 78, "\n";
   };
 
-  is ($http_response->code, 200, 'Got OK response');
+  like ($http_response->code, qr/^[23]/, 'Got OK response');
 
   $heap->{count}--;
   $kernel->post( weeble => 'shutdown' ) if $heap->{count} <= 0;
