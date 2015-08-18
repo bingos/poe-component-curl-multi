@@ -7,8 +7,8 @@ use HTTP::Request::Common qw[GET POST];
 use Test::More;
 
 {
-  require WWW::Curl::Easy;
-  my %libcurl = map { split '/' } split ' ', WWW::Curl::Easy->new->version;
+  require Net::Curl;
+  my %libcurl = map { split '/' } split ' ', Net::Curl::version;
   unless ( grep /SSL/i, keys %libcurl ) {
     plan skip_all => 'libcurl not built with SSL support';
   }
