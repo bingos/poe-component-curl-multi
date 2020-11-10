@@ -9,7 +9,7 @@ use Test::More;
 {
   require Net::Curl;
   my %libcurl = map { split '/' } split ' ', Net::Curl::version;
-  unless ( grep /SSL/i, keys %libcurl ) {
+  unless ( grep /(SSL|TLS)/i, keys %libcurl ) {
     plan skip_all => 'libcurl not built with SSL support';
   }
 }
