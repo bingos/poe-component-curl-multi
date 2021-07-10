@@ -202,6 +202,7 @@ sub _request {
     my $req = $args->{request};
     $easy->setopt(CURLOPT_URL, $req->uri);
     $easy->setopt(CURLOPT_SSL_VERIFYPEER, 0);
+    $easy->setopt(CURLOPT_SSL_VERIFYHOST, 0);
     $easy->setopt(CURLOPT_DNS_CACHE_TIMEOUT, 0);
     $easy->setopt(CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
     $easy->setopt(CURLOPT_ENCODING, '');
