@@ -33,6 +33,7 @@ sub spawn {
   $self->{agent} = [ $self->{agent} ] unless ref $self->{agent};
   delete $self->{agent} unless ref $self->{agent} eq 'ARRAY';
   $self->{multi} = Net::Curl::Multi->new();
+  $self->{multi}->setopt( CURLMOPT_SOCKETFUNCTION, sub { return 1 });
   $self->{session_id} = POE::Session->create(
         object_states => [
            $self => { shutdown => '_shutdown', request => '_request', cancel => '_cancel', pending_requests_count => '_req_count' },
