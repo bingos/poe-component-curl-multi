@@ -26,6 +26,7 @@ sub spawn {
   my $self = bless \%opts, $package;
   delete $self->{ipresolve} unless $self->{ipresolve} && $self->{ipresolve} =~ m!^[46]$!;
   delete $self->{verifypeer} unless defined $self->{verifypeer} && $self->{verifypeer} =~ m!^[01]$!;
+  delete $self->{verifyhost} unless defined $self->{verifyhost} && $self->{verifyhost} =~ m!^[02]$!;
   $self->{max_concurrency} = 0 unless $self->{max_concurrency} &&
     $self->{max_concurrency} =~ m!^\d+$!;
   $self->{followredirects} = 0 unless
@@ -185,6 +186,8 @@ sub _request {
     unless $args->{ipresolve} && $args->{ipresolve} =~ m!^[46]$!;
   delete $args->{verifypeer}
     unless defined $args->{verifypeer} && $args->{verifypeer} =~ m!^[01]$!;
+  delete $args->{verifyhost}
+    unless defined $args->{verifyhost} && $args->{verifyhost} =~ m!^[02]$!;
   $args->{sender} = $sender_id;
   if ( $errsp ) {
     $errsp->request( $args->{request} ) unless $errsp->code() eq '400';
@@ -213,6 +216,14 @@ sub _request {
       $verifypeer = $self->{verifypeer};
     }
     $easy->setopt(CURLOPT_SSL_VERIFYPEER, $verifypeer) if defined $verifypeer;
+    my $verifyhost;
+    if ( defined $args->{verifyhost} ) {
+      $verifypeer = $args->{verifyhost};
+    }
+    elsif ( defined $self->{verifyhost} ) {
+      $verifypeer = $self->{verifyhost};
+    }
+    $easy->setopt(CURLOPT_SSL_VERIFYHOST, $verifyhost) if defined $verifyhost;
     $easy->setopt(CURLOPT_DNS_CACHE_TIMEOUT, 0);
     my $ipresolve = $args->{ipresolve} || $self->{ipresolve};
     if ( $ipresolve ) {
@@ -495,6 +506,18 @@ Curl defaults to C<1> if you don't specify this.
 
 See L<https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html> for the full details.
 
+=item C<verifyhost>
+
+Again relevant to SSL/TLS, specify whether the hostname on the certificate is for
+the server it is known as.
+
+Set to C<2> to verify that the hostname (either in the Common Name field or a Subject
+Alternative Name field) matches the hostname in the URL.
+
+Set to C<0> to disable this verification and live with the consequences.
+
+See L<https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html> for the full details.
+
 =item C<curl_debug>
 
 Enable C<libcurl>'s verbosity.
@@ -602,6 +625,18 @@ verified. Set to C<1> for verification or C<0> to live dangerously.
 Curl defaults to C<1> if you don't specify this.
 
 See L<https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html> for the full details.
+
+=item C<verifyhost>
+
+Again relevant to SSL/TLS, specify whether the hostname on the certificate is for
+the server it is known as.
+
+Set to C<2> to verify that the hostname (either in the Common Name field or a Subject
+Alternative Name field) matches the hostname in the URL.
+
+Set to C<0> to disable this verification and live with the consequences.
+
+See L<https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html> for the full details.
 
 =item C<session>
 
