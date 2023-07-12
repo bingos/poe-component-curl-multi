@@ -204,7 +204,11 @@ sub _request {
     $easy->setopt(CURLOPT_URL, $req->uri);
     $easy->setopt(CURLOPT_SSL_VERIFYPEER, 0);
     $easy->setopt(CURLOPT_DNS_CACHE_TIMEOUT, 0);
-    $easy->setopt(CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+    my $ipresolve = $args->{ipresolve} || $self->{ipresolve};
+    if ( $ipresolve ) {
+      $easy->setopt(CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4) if $ipresolve eq '4';
+      $easy->setopt(CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V6) if $ipresolve eq '6';
+    }
     $easy->setopt(CURLOPT_ENCODING, '');
     if ( $self->{agent} ) {
       my $agent = $self->{agent}->[ rand @{ $self->{agent} } ];
@@ -459,6 +463,18 @@ See L<http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY>
 
 Specify the maximum number of concurrent requests, a value of C<0> means
 no limit will be imposed. The default is C<0>.
+
+=item C<ipresolve>
+
+Specify what kind of IP addresses to use when hostnames resolve to more than
+one version of IP.
+
+Specify C<4> for IPv4 only or C<6> for IPv6.
+
+The default is C<curl>'s default which is C<whatever>, which will use all
+IP versions.
+
+See L<https://curl.se/libcurl/c/CURLOPT_IPRESOLVE.html>
 
 =item C<curl_debug>
 
