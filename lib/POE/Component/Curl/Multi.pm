@@ -25,6 +25,7 @@ sub spawn {
   my $options = delete $opts{options};
   my $self = bless \%opts, $package;
   delete $self->{ipresolve} unless $self->{ipresolve} && $self->{ipresolve} =~ m!^[46]$!;
+  delete $self->{verifypeer} unless defined $self->{verifypeer} && $self->{verifypeer} =~ m!^[01]$!;
   $self->{max_concurrency} = 0 unless $self->{max_concurrency} &&
     $self->{max_concurrency} =~ m!^\d+$!;
   $self->{followredirects} = 0 unless
@@ -182,6 +183,8 @@ sub _request {
   }
   delete $args->{ipresolve}
     unless $args->{ipresolve} && $args->{ipresolve} =~ m!^[46]$!;
+  delete $args->{verifypeer}
+    unless defined $args->{verifypeer} && $args->{verifypeer} =~ m!^[01]$!;
   $args->{sender} = $sender_id;
   if ( $errsp ) {
     $errsp->request( $args->{request} ) unless $errsp->code() eq '400';
@@ -202,7 +205,14 @@ sub _request {
     my $easy = Net::Curl::Easy->new;
     my $req = $args->{request};
     $easy->setopt(CURLOPT_URL, $req->uri);
-    $easy->setopt(CURLOPT_SSL_VERIFYPEER, 0);
+    my $verifypeer;
+    if ( defined $args->{verifypeer} ) {
+      $verifypeer = $args->{verifypeer};
+    }
+    elsif ( defined $self->{verifypeer} ) {
+      $verifypeer = $self->{verifypeer};
+    }
+    $easy->setopt(CURLOPT_SSL_VERIFYPEER, $verifypeer) if defined $verifypeer;
     $easy->setopt(CURLOPT_DNS_CACHE_TIMEOUT, 0);
     my $ipresolve = $args->{ipresolve} || $self->{ipresolve};
     if ( $ipresolve ) {
@@ -476,6 +486,15 @@ IP versions.
 
 See L<https://curl.se/libcurl/c/CURLOPT_IPRESOLVE.html>
 
+=item C<verifypeer>
+
+Relevant to SSL/TLS, specify whether the authenticity of the peer's certificate should be
+verified. Set to C<1> for verification or C<0> to live dangerously.
+
+Curl defaults to C<1> if you don't specify this.
+
+See L<https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html> for the full details.
+
 =item C<curl_debug>
 
 Enable C<libcurl>'s verbosity.
@@ -562,6 +581,27 @@ Specify a proxy to use. This overrides the C<proxy> set with C<spawn>, if
 applicable.
 
 See L<http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY>
+
+=item C<ipresolve>
+
+Specify what kind of IP addresses to use when hostnames resolve to more than
+one version of IP.
+
+Specify C<4> for IPv4 only or C<6> for IPv6.
+
+The default is C<curl>'s default which is C<whatever>, which will use all
+IP versions.
+
+See L<https://curl.se/libcurl/c/CURLOPT_IPRESOLVE.html>
+
+=item C<verifypeer>
+
+Relevant to SSL/TLS, specify whether the authenticity of the peer's certificate should be
+verified. Set to C<1> for verification or C<0> to live dangerously.
+
+Curl defaults to C<1> if you don't specify this.
+
+See L<https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html> for the full details.
 
 =item C<session>
 
