@@ -442,6 +442,11 @@ L<POE::Component::Client::HTTP>.
 
 It is inspired by L<AnyEvent::Curl::Multi>.
 
+Versions of this module prior to 0.23 did not verify the peer's certificate
+when performing SSL/TLS. As of 0.23 peer verification is the default behaviour.
+If this is a problem for you then see the C<verifypeer> ( and optionally the
+C<verifyhost> ) options to C<spawn> and C<request>.
+
 =head1 CONSTRUCTOR
 
 =over
@@ -490,7 +495,7 @@ no limit will be imposed. The default is C<0>.
 Specify what kind of IP addresses to use when hostnames resolve to more than
 one version of IP.
 
-Specify C<4> for IPv4 only or C<6> for IPv6.
+Specify C<4> for IPv4 only or C<6> for IPv6 only.
 
 The default is C<curl>'s default which is C<whatever>, which will use all
 IP versions.
@@ -515,6 +520,8 @@ Set to C<2> to verify that the hostname (either in the Common Name field or a Su
 Alternative Name field) matches the hostname in the URL.
 
 Set to C<0> to disable this verification and live with the consequences.
+
+Curl defaults to C<2> if you don't specify this.
 
 See L<https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html> for the full details.
 
@@ -610,7 +617,7 @@ See L<http://curl.haxx.se/libcurl/c/curl_easy_setopt.html#CURLOPTPROXY>
 Specify what kind of IP addresses to use when hostnames resolve to more than
 one version of IP.
 
-Specify C<4> for IPv4 only or C<6> for IPv6.
+Specify C<4> for IPv4 only or C<6> for IPv6 only.
 
 The default is C<curl>'s default which is C<whatever>, which will use all
 IP versions.
@@ -635,6 +642,8 @@ Set to C<2> to verify that the hostname (either in the Common Name field or a Su
 Alternative Name field) matches the hostname in the URL.
 
 Set to C<0> to disable this verification and live with the consequences.
+
+Curl defaults to C<2> if you don't specify this.
 
 See L<https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html> for the full details.
 
